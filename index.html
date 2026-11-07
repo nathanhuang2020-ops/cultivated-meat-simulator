@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bioreactor Lab: cultivated meat simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#060d12;--panel:#0d1a22;--line:#1d3340;--text:#dbe9ee;--mut:#7f9aa6;--mint:#7df0c4;--cyan:#5cc8ff;--amber:#ffb454;--mag:#d66bff;--rose:#ff6b81;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:radial-gradient(1200px 600px at 30% -10%,#0f2a36 0%,var(--ink) 60%) var(--ink);color:var(--text);font:400 15px/1.5 Figtree,system-ui,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 20px 40px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:16px}
+h1{font:700 26px/1.1 "Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+.badge{font-size:13px;color:var(--amber);border:1px solid #5a4222;background:#241b0d;padding:3px 10px;border-radius:99px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-bottom:1px solid var(--line)}
+.stat{padding:10px 14px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font:700 22px/1.2 "Bricolage Grotesque",sans-serif;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--mut)}
+canvas{display:block;width:100%;height:auto}
+.status{padding:10px 16px;border-top:1px solid var(--line);font-weight:500;display:flex;gap:10px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--mint);flex:none;box-shadow:0 0 10px currentColor}
+.panel{padding:16px;display:flex;flex-direction:column;gap:14px;align-self:start}
+.btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button,select{font:600 14px Figtree,sans-serif;color:var(--text);background:#12262f;border:1px solid var(--line);border-radius:9px;padding:9px 8px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--mint)}
+button:disabled{opacity:.4;cursor:default}
+button.go{background:var(--mint);color:#04241a;border-color:var(--mint)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.ctl label{display:flex;justify-content:space-between;font-weight:600}
+.ctl output{font-variant-numeric:tabular-nums;color:var(--mint)}
+.ctl p{margin:2px 0 0;font-size:13px;color:var(--mut)}
+input[type=range]{width:100%;accent-color:var(--mint);margin:6px 0 0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chart{margin-top:16px;padding:14px 16px 12px}
+.chart h2,.notes h2{font:700 17px "Bricolage Grotesque",sans-serif;margin:0 0 6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mut);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.notes{margin-top:16px;padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px 28px}
+.notes p,.notes li{font-size:14px;color:#b4c8d0;max-width:62ch}
+.notes ul{padding-left:18px;margin:4px 0}
+.eq{background:#08131a;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--mint)}
+.insp{position:absolute;left:10px;top:9%;width:min(190px,36%);background:#08131aee;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;color:#b4c8d0}.insp>b{color:var(--text)}.insp canvas{display:none;width:100%;aspect-ratio:1;border-radius:8px;margin:6px 0;border:1px solid var(--line)}.insp.on canvas{display:block}.insp .irow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.insp button{padding:5px 9px;font-size:13px}.insp #itxt{margin-top:4px;min-height:3em}
+.batch{margin-bottom:16px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,330px);gap:12px 22px}.bhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}.bhead b{font:700 18px 'Bricolage Grotesque',sans-serif}.bar{display:flex;gap:3px;margin:10px 0 8px}.seg{height:10px;background:#12262f;border-radius:5px;overflow:hidden;min-width:6px}.seg i{display:block;height:100%;width:0;background:var(--mint)}.chips{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}.chips span{padding:2px 9px;border:1px solid var(--line);border-radius:99px;color:var(--mut)}.chips span.on{color:#04241a;background:var(--mint);border-color:var(--mint)}#bDesc{font-size:14px;color:#b4c8d0;margin:8px 0 0}#toasts{display:flex;flex-direction:column;gap:6px;margin-top:8px}.toast{display:flex;gap:8px;justify-content:space-between;background:#10303a;border:1px solid #2a5a68;border-radius:10px;padding:8px 10px;font-size:13px}.toast button{padding:0 8px;align-self:flex-start;background:none;border:0;font-size:18px;line-height:1}#evlog{list-style:none;margin:6px 0 0;padding:0;max-height:190px;overflow:auto;font-size:13px;color:#b4c8d0;border:1px solid var(--line);border-radius:10px;background:#08131a}#evlog li{padding:5px 10px;border-bottom:1px solid #12262f}#evlog li span{color:var(--mint);font-variant-numeric:tabular-nums;margin-right:6px}#evlog li.s{color:var(--text);font-weight:600}
+.done{position:absolute;inset:0;background:#050c11f5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;text-align:center;overflow:auto;z-index:5}.done[hidden]{display:none}.done h2{font:700 24px 'Bricolage Grotesque',sans-serif;margin:0}.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;width:100%;max-width:540px}.dgrid .stat{border:1px solid var(--line);border-radius:10px;padding:8px 10px}.dgrid .stat b{font-size:19px}
+@media(max-width:900px){.batch{grid-template-columns:1fr}}
+button.alert{border-color:var(--amber);animation:pl 1.2s infinite}button.alert.now{border-color:var(--rose);background:#3a1620}@keyframes pl{0%{box-shadow:0 0 0 0 #ffb45088}70%,100%{box-shadow:0 0 0 9px #ffb45000}}@media(prefers-reduced-motion:reduce){button.alert{animation:none}}
+.stagewrap{position:relative}.zoom{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:6px;background:#08131acc;border:1px solid var(--line);border-radius:10px;padding:4px}.zoom button{padding:5px 10px;min-width:34px}.zoom span{min-width:46px;text-align:center;font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums}
+.hint{font-size:13px;color:var(--mut);margin:4px 0;max-width:80ch}.expbar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}.expbar input{flex:1 1 220px;font:500 14px Figtree,sans-serif;color:var(--text);background:#08131a;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:13px}td{font-variant-numeric:tabular-nums}.empty{color:var(--mut)}.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}.x{padding:2px 9px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:720px){.insp{position:static;width:auto;border-width:1px 0 0;border-radius:0}.insp canvas{max-width:260px;margin:6px auto}.zoom{top:10px;bottom:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>Bioreactor Lab: growing muscle cells</h1><span class="badge">Educational simulation, not a validated biological model</span></header>
+<section class="box batch" aria-label="Batch timeline"><div><div class="bhead"><b id="bStage">Stage 1 of 5</b><span id="bTime" style="color:var(--mut);font-size:14px"></span><span id="bPct" style="color:var(--mint);font-weight:600"></span><label style="margin-left:auto;font-size:13px;color:var(--mut)">Batch length <select id="bDur"><option value="14">14 days</option><option value="21">21 days</option><option value="28" selected>28 days</option><option value="42">42 days</option><option value="56">56 days</option></select></label></div><div class="bar" id="bar"></div><div class="chips" id="chips"></div><p id="bDesc"></p><div id="toasts" aria-live="polite"></div></div><div><b style="font-size:14px">Event log</b><ul id="evlog"></ul><p class="hint">Stage lengths and rates are invented for teaching. Real processes vary widely, and not all use scaffolds.</p></div></section>
+<div class="grid">
+ <section class="box">
+  <div class="stats" id="stats"></div>
+  <div class="stagewrap"><canvas id="stage" aria-label="Animated bioreactor with cells, liquid and bubbles"></canvas><div class="zoom" role="group" aria-label="Zoom" title="Scroll to zoom, drag to pan when zoomed in"><button id="zOut" aria-label="Zoom out">−</button><span id="zv">100%</span><button id="zIn" aria-label="Zoom in">+</button><button id="zReset">Reset zoom</button></div><div class="insp" id="insp"><b>Cell inspector</b><canvas id="ic" aria-label="Magnified view of the selected cell"></canvas><div id="itxt">Click any cell in the tank to look inside it.</div><div class="irow"><button id="iFind">Find a dividing cell</button><button id="iClose" hidden>Close</button></div></div><div class="done" id="done" hidden><h2>Batch Complete — Ready for Harvest</h2><div class="dgrid" id="dGrid"></div><p class="hint">Simplified, illustrative numbers from an educational model. They do not predict real production times, yields or outcomes.</p><div class="irow" style="justify-content:center"><button class="go" id="dSave">Save batch to experiments</button><button id="dClose">View bioreactor</button><button id="dReset">Reset</button></div><p class="hint" id="dMsg"></p></div></div>
+  <div class="status"><span class="dot" id="dot"></span><span id="status">Press Start to begin the experiment.</span></div>
+ </section>
+ <aside class="box panel">
+  <div class="btns"><button class="go" id="bStart">Start</button><button id="bPause" disabled>Pause</button><button id="bReset">Reset</button></div>
+  <div id="ctls" style="display:flex;flex-direction:column;gap:14px"></div>
+  <p class="hint" id="mstat" role="status"></p><div class="row2"><button id="bFlush" title="Swap in fresh liquid">Replace medium</button>
+   <select id="spd" aria-label="Simulation speed" title="1x = 3 simulated hours per second"><option value="0.5">0.5x speed</option><option value="1" selected>1x speed</option><option value="2">2x speed</option><option value="4">4x speed</option></select></div>
+ </aside>
+</div>
+<section class="box chart"><h2>Population over time</h2>
+ <canvas id="graph" aria-label="Live graph of cell population and conditions"></canvas>
+ <div class="legend"><span><i style="background:var(--mint)"></i>Cells (left axis, million per mL)</span><span><i style="background:var(--amber)"></i>Nutrients</span><span><i style="background:var(--cyan)"></i>Oxygen</span><span><i style="background:var(--mag)"></i>Waste</span><span><i style="background:#ff9ad5"></i>Differentiated cells</span><span><i style="background:#b6e35a"></i>Tissue maturity</span><span>Shaded bands = production stages</span><span>Conditions shown as % of maximum</span></div>
+</section>
+<section class="box chart"><h2>Experiments</h2>
+ <p class="hint">Run the simulation, name it, and save it. Then press Reset, change one condition, and run again to compare. Every run starts from the same 0.6 million cells per mL and uses the same model.</p>
+ <div class="expbar"><input id="expName" type="text" maxlength="40" placeholder="Name this run, e.g. Control or Low Oxygen" aria-label="Experiment name"><button id="bSave" class="go">Save run</button><button id="bCsv">Export CSV</button><button id="bClear">Clear all</button></div>
+ <p class="hint" id="expMsg" role="status"></p>
+ <canvas id="cmp" aria-label="Comparison of cell population over time for saved experiments"></canvas>
+ <div class="legend"><label>Compare by <select id="cmpX"><option value="abs">Elapsed days</option><option value="pct">% of batch</option></select></label></div>
+ <div class="legend" id="cmpLeg"></div><p class="hint" id="fair"></p>
+ <div class="tw"><table id="tbl"><thead><tr><th>Experiment</th><th>Conditions</th><th>Batch</th><th>Initial (M/mL)</th><th>Final total</th><th>Precursors</th><th>Differentiated</th><th>Differentiation</th><th>Scaffold occupied</th><th>Tissue maturity</th><th>Growth</th><th>Doubling time</th><th></th></tr></thead><tbody></tbody></table></div>
+ <p class="hint">Doubling time is ln 2 divided by the average growth rate over the whole run, so it gets longer when growth stalls. An asterisk means a slider was changed mid-run. Medium changes are counted separately because they are part of the normal procedure. Compare runs of similar duration.</p>
+</section>
+<section class="box notes">
+ <div><h2>How the model works</h2>
+  <p>Each hour, the cells’ growth rate is a best-case maximum multiplied by one “how well is this going?” score between 0 and 1 for each condition. Any single poor score slows everything.</p>
+  <div class="eq">growth = max rate × nutrients × oxygen × low waste × temperature × free space</div>
+  <p>Net change = growth minus death. Death rises when cells starve, suffocate, sit in toxic waste, or overheat.</p></div>
+ <div><h2>What each control does</h2><ul>
+  <li><b>Nutrients:</b> how fast fresh sugars and amino acids are fed in. Cells use them faster as they multiply.</li>
+  <li><b>Oxygen:</b> how strongly gas is bubbled in. Dense cultures breathe it faster than it dissolves.</li>
+  <li><b>Temperature:</b> best near 37 °C. Cooler slows division gently; above about 39 °C damage builds quickly.</li>
+  <li><b>Waste production rate:</b> how fast cells release lactate and ammonia. Waste slows growth, then becomes toxic.</li></ul></div>
+ <div><h2>Assumptions</h2><ul>
+  <li>One well-mixed tank and one cell type (muscle precursor cells).</li>
+  <li>Nutrients and oxygen follow saturating (Monod-style) curves.</li>
+  <li>All waste is lumped into one inhibitor.</li>
+  <li>Crowding follows a logistic limit, here set at 20 million cells per mL.</li>
+  <li>Every number is illustrative and was chosen to look plausible, not fitted to data.</li></ul></div>
+ <div><h2>What is left out</h2><ul>
+  <li>pH, dissolved CO₂, separate glucose and glutamine, growth factors.</li>
+  <li>Real scaffold chemistry and geometry, and shear stress from stirring.</li>
+  <li>Lag phase, aging, cell-to-cell signalling, and the real molecular control of differentiation.</li>
+  <li>Real reactors need sterile technique, sensors and validated protocols.</li></ul></div>
+ <div><h2>Batch stages in this model</h2><ul><li><b>Timeline:</b> you pick 14 to 56 days. Stages take fixed shares: inoculation 3%, expansion 32%, scaffold 25%, differentiation 25%, maturation 15%. These shares are invented, not an industry standard. Rates are per hour, so shorter batches reach less differentiation and maturity.</li><li><b>Two cell types:</b> precursor cells (P) divide; differentiated cells (D) do not. Once signals start, cells move from P to D at rate k, which falls when nutrients or oxygen are poor: dP/dt = (growth − death − k)P and dD/dt = kP − death × D. Differentiation creates no new cells. Growth is also cut by up to 90% as the differentiated share rises.</li><li><b>Medium replacement (manual):</b> the model signals “replace soon” when waste passes 40% or nutrients fall under 15%, and “replace now” at 65% waste or 7% nutrients. Pressing Replace medium removes about 90% of the waste and restores nutrients. These thresholds are invented.</li><li><b>Scaffold:</b> microcarrier beads offer a surface for a made-up 14 million cells per mL. Occupancy is attached cells divided by that capacity.</li><li><b>Tissue maturity:</b> rises only in the last stage, faster with more attached, differentiated cells in good conditions.</li></ul></div>
+ <div><h2>Real biology vs. invented assumptions</h2><ul><li><b>Established ideas:</b> precursor cells are multiplied first because differentiated muscle cells mostly stop dividing. Scaffolds and microcarriers give anchorage-dependent cells a surface and structure. Differentiation means specialising into a cell type such as muscle. Maturation organises cells into tissue.</li><li><b>Invented here:</b> every duration, rate, percentage, capacity and the 28-day default.</li><li>Real methods differ a lot: some use scaffolds or microcarriers and some do not, and cell types, media and reactor designs all vary. This model does not predict real production times, yields or manufacturing outcomes.</li></ul></div>
+</section>
+</div>
+<script>
+const $=s=>document.querySelector(s),K=20,TAU=Math.PI*2;
+const P={feed:70,oxy:70,temp:37,wb:100};
+let Z=1,VX=400,VY=280,chg=false,mult=1,runs=[],sel=null,seek=false,BH=155,lastT="",Bd=28,beads=[],flashE=0;
+const CFG=[["feed","Nutrients",0,100,"%","Food for the cells. Too little and they starve and stop dividing."],
+["oxy","Oxygen",0,100,"%","Cells breathe oxygen dissolved in the liquid. Bubbles supply it."],
+["temp","Temperature",30,42,"°C","Muscle cells like body temperature. Cold slows them; heat hurts them."],
+["wb","Waste production rate",0,200,"%","How fast cells release lactate and ammonia. Too much poisons the liquid."]];
+const cd=$("#ctls");
+CFG.forEach(([k,l,mn,mx,u,d])=>{const s=document.createElement("div");s.className="ctl";
+s.innerHTML=`<label for="s_${k}">${l}<output id="o_${k}"></output></label><input type="range" id="s_${k}" min="${mn}" max="${mx}" step="${k=="temp"?0.5:1}" value="${P[k]}"><p>${d}</p>`;cd.appendChild(s);
+const inp=s.querySelector("input");const upd=()=>{P[k]=+inp.value;let t=P[k]+" "+u;if(k=="temp")t=P[k].toFixed(1)+" °C"+(P[k]<35?" (cold)":P[k]>39?" (too hot)":P[k]>=36&&P[k]<=38?" (ideal)":"");$("#o_"+k).textContent=t};
+inp.oninput=()=>{upd();if(S&&S.t>0)chg=true};upd()});
+const SD=[["cells","Cells, million/mL"],["net","Net growth per hour"],["dbl","Doubling time"],["nut","Nutrients"],["oxy","Oxygen"],["was","Waste"],["time","Hours elapsed"],["pre","Precursor cells"],["dif","Differentiated"],["dp","Differentiation"],["occ","Scaffold occupied"],["mat","Tissue maturity"]];
+$("#stats").innerHTML=SD.map(([k,l])=>`<div class="stat"><b id="v_${k}">0</b><span>${l}</span></div>`).join("");
+const V={x0:250,x1:550,top:70,bot:520,liq:140};
+let S,cells=[],bubbles=[],hist=[],running=false,speed=3,last=performance.now(),acc=0,phase=0;
+const R=(a,b)=>a+Math.random()*(b-a);
+function mk(intro){let x,y;do{x=R(V.x0+16,V.x1-16);y=R(V.liq+14,V.bot-20)}while(0);const c={x,y,r:R(5.5,7.5),s:0,t:0,a:1,ang:R(0,TAU),hj:R(-12,12),ph:R(0,TAU),u:Math.random(),e:0};if(intro){c.tx=x;c.ty=y;c.sx=410+R(-8,8);c.sy=V.top+6;c.x=c.sx;c.y=c.sy;c.k=0;c.dl=R(0,2.5)}return c}
+function init(){S={t:0,N:0.6,G:1,O:0.9,W:0,net:0,D:0,dp:0,att:0,sc:0,occ:0,M:0,stage:-1,sig:0,fl:0,nextFeed:1e9,nextMon:1e9,done:false,f:{fG:1,fO:1,fW:1,fT:1,fS:1,heat:0,kd:0,mu:0}};hist=[{t:0,n:S.N/K,G:1,O:.9,W:0,Dn:0,occ:0,M:0}];acc=0;cells=[];beads=[...Array(24)].map((_,i)=>({x:400,y:300,hx:V.x0+50+(i%8)*(V.x1-V.x0-100)/7,hy:380+Math.floor(i/8)*28,on:false,ph:R(0,TAU)}));for(let i=0;i<target();i++)cells.push(mk(1));$("#evlog").innerHTML="";$("#toasts").innerHTML="";$("#done").hidden=true;$("#bDur").disabled=false;enter(0)}
+const target=()=>Math.max(4,Math.round(Math.max(0,S.N-S.att)/K*420));
+function step(dt){const n=S.N/K,T=P.temp;
+const fG=S.G/(0.1+S.G),fO=S.O/(0.1+S.O),fW=1/(1+(S.W/0.6)**2),sd=T<37?6:2.2,fT=Math.exp(-(((T-37)/sd)**2)),fS=Math.max(0,1-n);
+const dp0=S.N>0?S.D/S.N:0,mu=0.035*fG*fO*fW*fT*fS*(1-0.9*dp0);
+const sG=Math.max(0,.05-S.G)/.05,sO=Math.max(0,.05-S.O)/.05,tox=Math.min(1,Math.max(0,S.W-.7)/.3),heat=Math.min(1,Math.max(0,T-39)/3);
+const kd=0.003+0.03*sG+0.03*sO+0.02*tox+0.06*heat**1.5;
+const m=0.4+0.6*fT;
+S.G+=(P.feed/100*0.06*(1-S.G)-0.06*n*m*S.G/(0.05+S.G))*dt;
+S.O+=(P.oxy/100*0.3*(1-S.O)-0.3*n*m*S.O/(0.05+S.O))*dt;
+S.W+=(P.wb/100*0.025*n*m*(0.5+0.5*fG)-0.003*S.W)*dt;
+S.G=Math.min(1,Math.max(0,S.G));S.O=Math.min(1,Math.max(0,S.O));S.W=Math.min(1,Math.max(0,S.W));
+const fr=S.t/Th(),sig=S.stage>=3?Math.max(0,Math.min(1,(fr-.6)/.04)):0,kdf=0.015*sig*(0.3+0.7*fG*fO),P0=Math.max(0,S.N-S.D);
+const Pn=P0*Math.exp((mu-kd-kdf)*dt),Dn=S.D*Math.exp(-kd*dt)+kdf*P0*dt;S.D=Dn;S.N=Math.max(0,Pn+Dn);S.dp=S.N>0?S.D/S.N:0;
+S.sc=Math.min(1,Math.max(0,(fr-.35)/.06));const Sc=14*S.sc;S.att+=0.05*(Math.min(Sc,S.N*.9)-S.att)*dt;S.att=Math.max(0,Math.min(S.att,S.N*.95));S.occ=Sc>.01?Math.min(1,S.att/Sc):0;
+if(S.stage>=4)S.M+=0.02*S.occ*S.dp*Math.cbrt(fG*fO*fT)*(1-S.M)*dt;
+S.t+=dt;S.net=(mu*P0-kd*S.N)/Math.max(S.N,1e-9);S.f={fG,fO,fW,fT,fS,heat,kd,mu,sG,sO,tox}}
+function limiter(){const f=S.f,T=P.temp;
+const L=[[f.fG,"Nutrients are running low"],[f.fO,"Oxygen is running low"],[f.fW,"Waste is building up and slowing cells"],[f.fT,T<37?"Too cold: cells are sluggish":"Too hot: cells are stressed"],[f.fS,"The tank is getting crowded"]].sort((a,b)=>a[0]-b[0])[0];
+let msg=L[0]>0.8?"Growing freely: conditions are close to ideal.":L[1]+".",col="var(--mint)";
+if(L[0]<=0.8)col="var(--amber)";
+if(S.net<-0.002){msg="Cells are dying. "+(f.heat>0.2?"It is too hot.":f.sG>0?"They have run out of nutrients.":f.sO>0?"They have run out of oxygen.":f.tox>0?"Waste has become toxic.":L[1]+".");col="var(--rose)"}
+if(S.N<0.02){msg="The culture has died out. Press Reset to try again.";col="var(--rose)"}
+return[msg,col]}
+function tick(now){const dtr=Math.min(0.05,(now-last)/1000);last=now;phase+=dtr;
+if(running){acc+=dtr*speed;while(acc>=0.1&&running){step(0.1);acc-=0.1;events();const lt=hist[hist.length-1].t;if(S.t-lt>=1)hist.push(snap())}}
+updCells(dtr);updBubbles(dtr);updBeads(dtr);drawStage(now/1000);drawGraph();drawCmp();tickInsp();updBatch();updUI();requestAnimationFrame(tick)}
+function updCells(dt){let cnt=0;for(const c of cells){if(c.s!==2)cnt+=c.s===1?2:1}
+let def=target()-cnt;
+if(def>0){const k=Math.min(def,1+Math.floor(def*0.15));for(let i=0;i<k;i++){const c=cells[(Math.random()*cells.length)|0];if(c&&c.s===0&&c.u>=S.dp&&!(c.k<1)){c.s=1;c.t=0;c.ang=R(0,TAU)}}}
+else if(def<0){const k=Math.min(-def,1+Math.floor(-def*0.15));for(let i=0;i<k;i++){const c=cells[(Math.random()*cells.length)|0];if(c&&c.s===0&&!(c.k<1)){c.s=2;c.a=1;c.dk=S.net<-.002}}}
+const add=[];
+for(const c of cells){if(c.k<1){if(running||S.t>0){c.dl-=dt;if(c.dl<=0){c.k=Math.min(1,c.k+dt/2.2);const e=c.k*c.k*(3-2*c.k);c.x=c.sx+(c.tx-c.sx)*e;c.y=c.sy+(c.ty-c.sy)*e}}continue}c.e=(c.e||0)+((c.u<S.dp?1:0)-(c.e||0))*Math.min(1,dt*.8);const a=(c.x-V.x0)/(V.x1-V.x0),b=Math.min(1,Math.max(0,(c.y-V.liq)/(V.bot-V.liq)));
+const fx=Math.PI*Math.sin(2*Math.PI*a)*Math.cos(Math.PI*b),fy=-2*Math.PI*Math.cos(2*Math.PI*a)*Math.sin(Math.PI*b);
+c.x+=(fx*6+Math.sin(phase*1.3+c.ph)*5)*dt;c.y+=(fy*6+Math.cos(phase*1.1+c.ph)*5)*dt;
+const inset=c.y>V.bot-48?(c.y-(V.bot-48))*0.9:0;
+c.x=Math.min(V.x1-12-inset,Math.max(V.x0+12+inset,c.x));c.y=Math.min(V.bot-14,Math.max(V.liq+10,c.y));
+if(c.s===1){c.t+=dt/(3.5/Math.sqrt(mult));if(c.t>=1){const d=c.r*1.1;add.push({x:c.x+Math.cos(c.ang)*d,y:c.y+Math.sin(c.ang)*d,r:c.r,s:0,t:0,a:1,ang:R(0,TAU),hj:c.hj,ph:R(0,TAU),u:c.u,e:c.e||0});c.x-=Math.cos(c.ang)*d;c.y-=Math.sin(c.ang)*d;c.s=0}}
+if(c.s===2){c.a-=dt/1.6}}
+cells=cells.filter(c=>c.a>0).concat(add)}
+function updBubbles(dt){const rate=P.oxy/100*45;if(Math.random()<rate*dt&&bubbles.length<130)bubbles.push({x:R(V.x0+90,V.x1-90),y:V.bot-22,r:R(1.8,4.2),ph:R(0,TAU)});
+for(const b of bubbles){b.y-=(55+b.r*14)*dt;b.x+=Math.sin(phase*4+b.ph)*10*dt}
+bubbles=bubbles.filter(b=>b.y>V.liq+2)}
+const cv=$("#stage"),g=cv.getContext("2d"),gv=$("#graph"),gg=gv.getContext("2d");
+function fit(c,w,h){const r=Math.min(2,window.devicePixelRatio||1),cw=c.clientWidth||w;c.width=cw*r;c.height=cw*h/w*r;c.style.aspectRatio=w+"/"+h;c._k=c.width/w}
+function rrect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r[0],y);c.lineTo(x+w-r[1],y);c.quadraticCurveTo(x+w,y,x+w,y+r[1]);c.lineTo(x+w,y+h-r[2]);c.quadraticCurveTo(x+w,y+h,x+w-r[2],y+h);c.lineTo(x+r[3],y+h);c.quadraticCurveTo(x,y+h,x,y+h-r[3]);c.lineTo(x,y+r[0]);c.quadraticCurveTo(x,y,x+r[0],y);c.closePath()}
+function tube(pts,col,flow,t){g.lineWidth=9;g.strokeStyle="#16303b";g.lineCap="round";g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.stroke();
+g.lineWidth=4;g.strokeStyle=col+"55";g.stroke();if(flow>0.02){g.setLineDash([3,16]);g.lineDashOffset=-t*60*flow;g.strokeStyle=col;g.lineWidth=3;g.stroke();g.setLineDash([])}}
+function drawStage(t){const k=cv._k;g.setTransform(k,0,0,k,0,0);g.clearRect(0,0,800,560);clampV();g.translate(400,280);g.scale(Z,Z);g.translate(-VX,-VY);
+g.strokeStyle="#0f2330";g.lineWidth=1;for(let x=0;x<=800;x+=40){g.beginPath();g.moveTo(x,0);g.lineTo(x,560);g.stroke()}for(let y=0;y<=560;y+=40){g.beginPath();g.moveTo(0,y);g.lineTo(800,y);g.stroke()}
+const T=P.temp,jc=T>39?"#ff7a45":T<35?"#5cc8ff":"#4de0b0";
+g.save();g.shadowColor=jc;g.shadowBlur=26;g.strokeStyle=jc+"88";g.lineWidth=2;rrect(g,V.x0-10,V.top-2,V.x1-V.x0+20,V.bot-V.top+14,[16,16,56,56]);g.stroke();g.restore();
+tube([[110,36],[330,36],[330,V.top+4]],"#ffb454",P.feed/100,t);
+tube([[690,36],[470,36],[470,V.top+4]],"#5cc8ff",P.oxy/100,t);if(S.stage===0)tube([[410,12],[410,V.top+4]],"#7df0c4",running?1:0,t);
+g.fillStyle="#7f9aa6";g.font="600 13px Figtree,sans-serif";g.fillText("Fresh food in",110,24);g.fillText("Air and oxygen in",580,24);if(S.stage===0)g.fillText("Seed cells in",322,16);
+// liquid
+const w=S.W,hue=350-w*310,sat=70-(1-S.G)*25;
+const grad=g.createLinearGradient(0,V.liq,0,V.bot);grad.addColorStop(0,`hsla(${hue},${sat}%,34%,.9)`);grad.addColorStop(1,`hsla(${hue},${sat}%,20%,.95)`);
+g.save();rrect(g,V.x0,V.top,V.x1-V.x0,V.bot-V.top,[10,10,48,48]);g.clip();
+g.fillStyle="#0a1820";g.fillRect(0,0,800,560);
+const wv=Math.sin(t*2)*1.5;g.fillStyle=grad;g.beginPath();g.moveTo(V.x0,V.liq);for(let x=V.x0;x<=V.x1;x+=10)g.lineTo(x,V.liq+Math.sin(x*0.05+t*2.5)*1.8+wv*0.2);g.lineTo(V.x1,V.bot);g.lineTo(V.x0,V.bot);g.fill();
+const fl=flashE-t;if(fl>0){g.fillStyle=`rgba(255,210,150,${Math.min(.3,fl*.2)})`;g.fillRect(V.x0,V.liq,V.x1-V.x0,V.bot-V.liq)}
+// dip tube + sparger
+g.strokeStyle="#3a5663";g.lineWidth=3;g.beginPath();g.moveTo(470,V.top);g.lineTo(470,V.bot-24);g.lineTo(400,V.bot-24);g.stroke();
+g.fillStyle="#6c8c99";g.fillRect(V.x0+84,V.bot-26,132,5);
+// impeller
+const cx=(V.x0+V.x1)/2-40,ang=t*5;g.strokeStyle="#9fb7c1";g.lineWidth=5;g.beginPath();g.moveTo(cx,V.top);g.lineTo(cx,V.bot-90);g.stroke();
+for(const yy of[V.bot-120,V.bot-90]){const bw=Math.abs(Math.cos(ang+(yy>V.bot-100?1.5:0)))*52+6;g.fillStyle="#aebfc7aa";g.fillRect(cx-bw,yy-3,bw*2,6)}
+// cells
+const f=S.f,stress=1-Math.min(f.fG,f.fO,f.fW,f.fT);const base=Math.max(10,155-stress*120-f.heat*60);
+BH=base;drawTissue();drawBeads();for(const c of cells)drawCell(c,base);if(sel&&cells.includes(sel)){g.strokeStyle="#fff";g.lineWidth=1.5;g.setLineDash([4,3]);g.beginPath();g.arc(sel.x,sel.y,sel.r*(sel.s===1?2.3:1.7)+Math.sin(phase*5),0,TAU);g.stroke();g.setLineDash([])}
+// bubbles
+for(const b of bubbles){g.strokeStyle="rgba(220,245,255,.65)";g.lineWidth=1;g.fillStyle="rgba(220,245,255,.12)";g.beginPath();g.arc(b.x,b.y,b.r,0,TAU);g.fill();g.stroke();g.fillStyle="rgba(255,255,255,.7)";g.beginPath();g.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.25,0,TAU);g.fill()}
+g.restore();
+// glass
+g.strokeStyle="#bfe3f0";g.globalAlpha=.55;g.lineWidth=3;rrect(g,V.x0,V.top,V.x1-V.x0,V.bot-V.top,[10,10,48,48]);g.stroke();g.globalAlpha=.18;g.lineWidth=10;g.beginPath();g.moveTo(V.x0+14,V.top+40);g.lineTo(V.x0+14,V.bot-60);g.stroke();g.globalAlpha=1;
+g.fillStyle="#1a3340";rrect(g,V.x0-14,V.top-26,V.x1-V.x0+28,30,[8,8,4,4]);g.fill();g.strokeStyle="#2b4c5c";g.lineWidth=1.5;g.stroke();
+// readout
+g.fillStyle="#08131a";rrect(g,60,440,120,64,[8,8,8,8]);g.fill();g.strokeStyle="#1d3340";g.stroke();
+g.fillStyle=jc;g.font="700 26px Bricolage Grotesque,sans-serif";g.fillText(T.toFixed(1)+" °C",72,476);g.fillStyle="#7f9aa6";g.font="12px Figtree,sans-serif";g.fillText("Jacket temperature",72,494);
+g.fillText("Stirrer",cx-16,V.top+90>0?V.top-32:0);g.fillStyle="#7f9aa6";g.fillText("Individual cells shown not to scale",V.x0+4,V.bot+34)}
+function drawCell(c,hue){if(c.k<1&&c.dl>0)return;const h=hue+c.hj;
+if(c.s===2){g.fillStyle=c.dk?`rgba(150,165,170,${c.a*.7})`:`hsla(${h},75%,62%,${c.a*.7})`;g.beginPath();g.arc(c.x,c.y,c.r*.9,0,TAU);g.fill();return}
+if(c.s===0&&(c.e||0)>.05){const e=c.e,hh=h+(-20-h)*e;g.save();g.translate(c.x,c.y);g.rotate(Math.sin(c.ang)*(1-.85*S.M));g.fillStyle=`hsla(${hh},70%,55%,.85)`;g.strokeStyle=`hsla(${hh},85%,80%,.95)`;g.lineWidth=1.2;g.beginPath();g.ellipse(0,0,c.r*(1+1.5*e),c.r*(1-.4*e),0,0,TAU);g.fill();g.stroke();g.fillStyle=`hsla(${hh},60%,25%,.9)`;g.beginPath();g.ellipse(0,0,c.r*.45,c.r*.3,0,0,TAU);g.fill();g.restore();return}const fill=`hsla(${h},75%,62%,.78)`,ring=`hsla(${h},85%,82%,.95)`,nuc=`hsla(${h},60%,28%,.9)`;
+if(c.s===1){const p=c.t,d=p*c.r*1.1,r=c.r*(1-0.12*p),ca=Math.cos(c.ang),sa=Math.sin(c.ang);
+for(const sg of[-1,1]){const x=c.x+sg*ca*d,y=c.y+sg*sa*d;g.fillStyle=fill;g.strokeStyle=ring;g.lineWidth=1.2;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();g.stroke();g.fillStyle=nuc;g.beginPath();g.arc(x,y,r*.38,0,TAU);g.fill()}return}
+g.fillStyle=fill;g.strokeStyle=ring;g.lineWidth=1.2;g.beginPath();g.arc(c.x,c.y,c.r,0,TAU);g.fill();g.stroke();g.fillStyle=nuc;g.beginPath();g.arc(c.x+1,c.y,c.r*.38,0,TAU);g.fill()}
+function drawGraph(){const k=gv._k;gg.setTransform(k,0,0,k,0,0);gg.clearRect(0,0,800,260);
+const L=48,Rr=788,Tp=12,B=228,tm=Th(),X=t=>L+t/tm*(Rr-L),Y=v=>B-v*(B-Tp);
+gg.font="12px Figtree,sans-serif";gg.fillStyle="#7f9aa6";gg.strokeStyle="#1a2f3a";gg.lineWidth=1;
+for(let i=0;i<=4;i++){const y=Y(i/4);gg.beginPath();gg.moveTo(L,y);gg.lineTo(Rr,y);gg.stroke();gg.textAlign="right";gg.fillText(String(i*K/4),L-6,y+4)}
+gg.textAlign="center";for(let t=0;t<=tm;t+=tm/6){gg.fillText(Math.round(t/24)+" d",X(t),B+18)}
+gg.setLineDash([5,5]);gg.strokeStyle="#7df0c466";gg.beginPath();gg.moveTo(L,Y(1));gg.lineTo(Rr,Y(1));gg.stroke();gg.setLineDash([]);gg.textAlign="left";gg.fillStyle="#7df0c4aa";gg.fillText("Tank capacity",L+6,Y(1)-5);
+{const ed=ED;for(let i=0;i<5;i++){gg.fillStyle=i%2?"#ffffff0a":"#ffffff04";gg.fillRect(X(ed[i]*tm),Tp,X(ed[i+1]*tm)-X(ed[i]*tm),B-Tp)}gg.fillStyle="#7f9aa6";gg.font="11px Figtree,sans-serif";gg.textAlign="left";["","Expansion","Scaffold","Differentiation","Maturation"].forEach((s,i)=>{if(i)gg.fillText(s,X(ed[i]*tm)+4,Tp+11)})}const pts=cur();
+const line=(key,col,w)=>{gg.strokeStyle=col;gg.lineWidth=w;gg.beginPath();pts.forEach((p,i)=>{const x=X(p.t),y=Y(Math.min(1,p[key]));i?gg.lineTo(x,y):gg.moveTo(x,y)});gg.stroke()};
+line("G","#ffb454",1.6);line("O","#5cc8ff",1.6);line("W","#d66bff",1.6);line("Dn","#ff9ad5",1.6);line("M","#b6e35a",1.6);
+gg.beginPath();pts.forEach((p,i)=>{const x=X(p.t),y=Y(p.n);i?gg.lineTo(x,y):gg.moveTo(x,y)});gg.lineTo(X(S.t),B);gg.lineTo(X(0),B);gg.fillStyle="#7df0c422";gg.fill();line("n","#7df0c4",3)}
+function updUI(){const n=S.N/K;
+$("#v_cells").textContent=S.N.toFixed(1);
+const r=S.net*100;$("#v_net").textContent=(r>=0?"+":"")+r.toFixed(1)+"%";$("#v_net").style.color=r<-0.1?"var(--rose)":r<0.3?"var(--amber)":"var(--mint)";
+$("#v_dbl").textContent=S.net>0.0005?(Math.LN2/S.net).toFixed(0)+" h":"none";
+$("#v_nut").textContent=Math.round(S.G*100)+"%";$("#v_oxy").textContent=Math.round(S.O*100)+"%";$("#v_was").textContent=Math.round(S.W*100)+"%";$("#v_time").textContent=S.t.toFixed(0)+" h";$("#v_pre").textContent=(S.N-S.D).toFixed(1);$("#v_dif").textContent=S.D.toFixed(1);$("#v_dp").textContent=Math.round(S.dp*100)+"%";$("#v_occ").textContent=Math.round(S.occ*100)+"%";$("#v_mat").textContent=Math.round(S.M*100)+"%";
+if(running||S.t>0){const[m,c]=limiter();$("#status").textContent=m;$("#dot").style.color=c;$("#dot").style.background=c}}
+$("#bStart").onclick=()=>{running=true;$("#bDur").disabled=true;$("#bStart").disabled=true;$("#bPause").disabled=false};
+$("#bPause").onclick=()=>{running=false;$("#bStart").disabled=false;$("#bStart").textContent="Resume";$("#bPause").disabled=true};
+$("#bReset").onclick=()=>{running=false;chg=false;init();bubbles=[];$("#bStart").disabled=false;$("#bStart").textContent="Start";$("#bPause").disabled=true;$("#status").textContent="Press Start to begin the experiment.";$("#dot").style.background="var(--mint)";$("#dot").style.color="var(--mint)"};
+$("#bFlush").onclick=()=>{if(S.done||S.t<=0)return;S.fl++;S.sig=0;S.W*=0.1;S.G=1;S.O=Math.max(S.O,0.9);flashE=performance.now()/1000+1.6;logEv("You replaced the medium (about 90% of waste removed, nutrients restored)","m");toast("Medium replaced","Fresh medium added and most waste removed.",5000)};
+$("#spd").onchange=e=>{mult=+e.target.value;speed=3*mult};
+/* zoom */
+function clampV(){const hw=400/Z,hh=280/Z;VX=Math.min(800-hw,Math.max(hw,VX));VY=Math.min(560-hh,Math.max(hh,VY))}
+function setZ(nz,lx=400,ly=280){nz=Math.min(5,Math.max(1,nz));clampV();const wx=VX+(lx-400)/Z,wy=VY+(ly-280)/Z;Z=nz;VX=wx-(lx-400)/Z;VY=wy-(ly-280)/Z;clampV();$("#zv").textContent=Math.round(Z*100)+"%";cv.style.touchAction=Z>1?"none":"auto";cv.style.cursor=Z>1?"grab":"default"}
+$("#zIn").onclick=()=>setZ(Z*1.25);$("#zOut").onclick=()=>setZ(Z/1.25);$("#zReset").onclick=()=>{VX=400;VY=280;setZ(1)};
+const lp=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*800,(e.clientY-r.top)/r.height*560]};
+cv.addEventListener("wheel",e=>{e.preventDefault();const[x,y]=lp(e);setZ(Z*(e.deltaY<0?1.15:1/1.15),x,y)},{passive:false});
+let drag=null;
+cv.addEventListener("pointerdown",e=>{if(Z>1){drag=lp(e);cv.setPointerCapture(e.pointerId);cv.style.cursor="grabbing"}});
+cv.addEventListener("pointermove",e=>{if(drag){const[x,y]=lp(e);VX-=(x-drag[0])/Z;VY-=(y-drag[1])/Z;drag=[x,y];clampV()}});
+const endd=()=>{drag=null;cv.style.cursor=Z>1?"grab":"default"};cv.addEventListener("pointerup",endd);cv.addEventListener("pointercancel",endd);
+/* experiments */
+const cc=$("#cmp"),cg=cc.getContext("2d"),PAL=["#7df0c4","#ff6b81","#5cc8ff","#ffb454","#d66bff","#b6e35a","#ff9ad5","#9aa8ff"];let cid=0;
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cur=()=>hist.concat([snap()]);
+function stats(p){const a=p[0].n*K,b=p[p.length-1].n*K,t=p[p.length-1].t,r=a>0&&b>0&&t>0?Math.log(b/a)/t:0;const l=p[p.length-1],df=l.Dn*K;return{init:a,fin:b,dur:t,gr:(b/a-1)*100,dbl:r>0.0005?Math.LN2/r:null,dif:df,pre:b-df,dp:b>0?df/b:0,occ:l.occ,mat:l.M}}
+const cond=p=>`Food ${p.feed}%, O₂ ${p.oxy}%, ${p.temp.toFixed(1)} °C, waste ${p.wb}%`;
+const msg=t=>{$("#expMsg").textContent=t};
+function renderTbl(){$("#tbl tbody").innerHTML=runs.length?runs.map((r,i)=>{const s=stats(r.pts);return`<tr><td><i class="sw" style="background:${r.col}"></i>${esc(r.label)}</td><td>${cond(r.P)}, ${r.fl} medium change${r.fl===1?"":"s"}${r.chg?" *":""}</td><td>${r.days} d${r.done?"":" (stopped at "+(s.dur/24).toFixed(1)+" d)"}</td><td>${s.init.toFixed(2)}</td><td>${s.fin.toFixed(2)}</td><td>${s.pre.toFixed(2)}</td><td>${s.dif.toFixed(2)}</td><td>${(s.dp*100).toFixed(0)}%</td><td>${(s.occ*100).toFixed(0)}%</td><td>${(s.mat*100).toFixed(0)}%</td><td>${s.gr>=0?"+":""}${s.gr.toFixed(0)}%</td><td>${s.dbl?s.dbl.toFixed(1)+" h":"no net growth"}</td><td><button class="x" data-i="${i}" aria-label="Remove ${esc(r.label)}">×</button></td></tr>`}).join(""):'<tr><td colspan="13" class="empty">No saved runs yet. Start the simulation, then press Save run.</td></tr>';
+$("#cmpLeg").innerHTML=runs.map(r=>`<span><i style="background:${r.col}"></i>${esc(r.label)}</span>`).join("")+'<span><i style="background:#fff;opacity:.6"></i>Current run, unsaved (dashed)</span>';fairNote()}
+$("#tbl").onclick=e=>{const b=e.target.closest("button.x");if(b){runs.splice(+b.dataset.i,1);renderTbl()}};
+$("#bSave").onclick=()=>{if(S.t<1){msg("Run the simulation for a while first, then save it.");return}
+const b=$("#expName").value.trim()||"Run "+(runs.length+1);let l=b,n=2;while(runs.some(r=>r.label===l))l=b+" ("+n+++")";
+runs.push({label:l,pts:cur(),P:{...P},chg,days:Bd,done:!!S.done,fl:S.fl,col:PAL[cid++%PAL.length]});$("#expName").value="";msg("Saved “"+l+"”. Press Reset, change one condition, and run again to compare.");renderTbl()};
+$("#bClear").onclick=()=>{runs=[];msg("");renderTbl()};
+const lab=s=>/^[=+\-@\t\r]/.test(s)?"'"+s:s,q=v=>{v=String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+function csv(){const rows=[["Summary"],["Experiment","Nutrients_pct","Oxygen_pct","Temperature_C","Waste_production_pct","Conditions_changed_mid_run","Duration_h","Initial_million_per_mL","Final_million_per_mL","Growth_pct","Doubling_time_h","Medium_changes","Batch_length_days","Batch_completed","Final_precursor_million_per_mL","Final_differentiated_million_per_mL","Differentiation_progress_pct","Scaffold_occupancy_pct","Tissue_maturity_pct"]];
+runs.forEach(r=>{const s=stats(r.pts);rows.push([lab(r.label),r.P.feed,r.P.oxy,r.P.temp,r.P.wb,r.chg?"yes":"no",s.dur.toFixed(1),s.init.toFixed(3),s.fin.toFixed(3),s.gr.toFixed(1),s.dbl?s.dbl.toFixed(2):"n/a",r.fl,r.days,r.done?"yes":"no",s.pre.toFixed(3),s.dif.toFixed(3),(s.dp*100).toFixed(1),(s.occ*100).toFixed(1),(s.mat*100).toFixed(1)])});
+rows.push([],["Time series"],["Experiment","Time_h","Cells_million_per_mL","Nutrients_pct","Oxygen_pct","Waste_pct","Differentiated_million_per_mL","Scaffold_occupancy_pct","Tissue_maturity_pct","Batch_progress_pct"]);
+runs.forEach(r=>r.pts.forEach(p=>rows.push([lab(r.label),p.t.toFixed(1),(p.n*K).toFixed(3),(p.G*100).toFixed(1),(p.O*100).toFixed(1),(p.W*100).toFixed(1),(p.Dn*K).toFixed(3),(p.occ*100).toFixed(1),(p.M*100).toFixed(1),(p.t/(r.days*24)*100).toFixed(1)])));
+return"\ufeff"+rows.map(r=>r.map(q).join(",")).join("\r\n")}
+$("#bCsv").onclick=async()=>{if(!runs.length){msg("Save at least one run before exporting.");return}
+const name="bioreactor-experiments.csv";
+if(!window.claude){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv()],{type:"text/csv"}));a.download=name;a.click();return}
+try{const d=await window.claude.use("downloads");if(!d){msg("Export is not available in this view. Open the artifact in claude.ai to download the CSV.");return}
+await d.save({filename:name,data:csv()});msg("CSV exported: summary table first, then every saved time series.")}catch(e){msg(e&&e.code==="declined"?"Export cancelled.":"Export failed. Please try again.")}};
+function drawCmp(){const k=cc._k;cg.setTransform(k,0,0,k,0,0);cg.clearRect(0,0,800,260);
+const L=48,Rr=788,Tp=12,B=228,nm=$("#cmpX").value==="pct",tm=nm?1:Math.max(Th(),...runs.map(r=>r.days*24)),X=t=>L+t/tm*(Rr-L),Y=v=>B-Math.min(1,v)*(B-Tp);
+cg.font="12px Figtree,sans-serif";cg.fillStyle="#7f9aa6";cg.strokeStyle="#1a2f3a";cg.lineWidth=1;
+for(let i=0;i<=4;i++){const y=Y(i/4);cg.beginPath();cg.moveTo(L,y);cg.lineTo(Rr,y);cg.stroke();cg.textAlign="right";cg.fillText(String(i*K/4),L-6,y+4)}
+cg.textAlign="center";for(let t=0;t<=tm;t+=tm/6)cg.fillText(nm?Math.round(t*100)+"%":Math.round(t/24)+" d",X(t),B+18);
+cg.textAlign="right";cg.fillStyle="#7df0c4aa";cg.fillText("Tank capacity",Rr,Y(1)-5);
+const ln=(p,col,w,d,dd)=>{cg.setLineDash(d||[]);cg.strokeStyle=col;cg.lineWidth=w;cg.beginPath();p.forEach((q,i)=>{const xx=X(nm?q.t/(dd*24):q.t);i?cg.lineTo(xx,Y(q.n)):cg.moveTo(xx,Y(q.n))});cg.stroke();cg.setLineDash([])};
+runs.forEach(r=>ln(r.pts,r.col,2.5,0,r.days));if(S.t>0)ln(cur(),"rgba(255,255,255,.7)",1.8,[6,4],Bd)}
+renderTbl();
+/* cell inspector */
+const ic=$("#ic"),ix=ic.getContext("2d"),ip=$("#insp");ic.width=ic.height=400;
+let dn=null;cv.addEventListener("pointerdown",e=>{dn=[e.clientX,e.clientY]});
+cv.addEventListener("pointerup",e=>{if(!dn)return;const m=Math.hypot(e.clientX-dn[0],e.clientY-dn[1]);dn=null;if(m>6)return;
+const[lx,ly]=lp(e),wx=VX+(lx-400)/Z,wy=VY+(ly-280)/Z;let best=null,bd=1e9;for(const c of cells){const d=Math.hypot(c.x-wx,c.y-wy);if(d<bd){bd=d;best=c}}
+if(best&&bd<Math.max(best.r*1.8,20/Z)){sel=best;seek=false}});
+$("#iFind").onclick=()=>{const d=cells.filter(c=>c.s===1).sort((a,b)=>a.t-b.t)[0];if(d){sel=d;seek=false}else{sel=null;seek=true}};
+$("#iClose").onclick=()=>{sel=null;seek=false};
+function setT(t,d){const s=t+d;if(s!==lastT){lastT=s;$("#itxt").innerHTML="<b>"+t+"</b><br>"+d}}
+function tickInsp(){if(seek){const c=cells.find(c=>c.s===1&&c.t<.4);if(c){sel=c;seek=false}}
+if(sel&&!cells.includes(sel)){sel=null}
+ip.classList.toggle("on",!!sel);$("#iClose").hidden=!sel&&!seek;
+if(!sel){setT(seek?"Waiting for a division":"Click a cell",seek?(running?"The inspector will lock onto the next cell that starts dividing.":"No cell is dividing right now. Press Start and the inspector will lock on automatically."):"Click any cell in the tank to look inside it, or find one that is dividing.");return}
+const c=sel;drawInsp(c);
+if(c.s===2)setT("Dying cell","Conditions are too harsh, so this cell is shrinking and will be removed.");
+else if(c.s===0&&(c.e||0)>.5)setT("Differentiated muscle cell","Elongated and specialised. It no longer divides much and helps form muscle-like fibres.");else if(c.s===0)setT("Resting cell (interphase)","It is growing and copying its DNA. It divides only when nutrients, oxygen and temperature allow.");
+else{const p=c.t,n=p<.2?["Prophase","DNA condenses into visible chromosomes."]:p<.45?["Metaphase","Chromosomes line up across the middle."]:p<.7?["Anaphase","Copies are pulled to opposite ends."]:["Cytokinesis","The cell pinches in two and new nuclei form."];setT("Dividing: "+n[0]+" ("+Math.round(p*100)+"%)",n[1]+" Simplified illustration.")}}
+function drawInsp(c){const x=ix,h=BH+c.hj,p=c.s===1?c.t:0,R=46,cl=v=>Math.min(1,Math.max(0,v));
+x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,400,400);x.setTransform(2,0,0,2,200,200);
+const bg=x.createRadialGradient(0,0,10,0,0,100);bg.addColorStop(0,"#0c2230");bg.addColorStop(1,"#040b10");x.fillStyle=bg;x.fillRect(-100,-100,200,200);
+if(c.s===2){x.globalAlpha=Math.max(.2,c.a);x.fillStyle="hsl(200,8%,48%)";x.beginPath();x.arc(0,0,R*.8,0,TAU);x.fill();x.globalAlpha=1;return}
+if(c.s===0&&(c.e||0)>.5){x.fillStyle="hsla(350,85%,86%,1)";x.beginPath();x.ellipse(0,0,R*1.9+2,R*.6+2,0,0,TAU);x.fill();x.fillStyle="hsla(350,65%,48%,.95)";x.beginPath();x.ellipse(0,0,R*1.9-2,R*.6-2,0,0,TAU);x.fill();x.strokeStyle="rgba(255,200,210,.35)";x.lineWidth=1.5;for(let i=-3;i<=3;i++){x.beginPath();x.moveTo(-R*1.7,i*R*.14);x.lineTo(R*1.7,i*R*.14);x.stroke()}x.fillStyle="hsla(350,50%,22%,.9)";for(const nx of[-.9,0,.9]){x.beginPath();x.ellipse(nx*R,0,R*.22,R*.14,0,0,TAU);x.fill()}return}
+const q=cl((p-.55)/.45),L=p<.55?[[0,R*(1+.35*p/.55),R*(1-.08*p/.55)]]:[[-R*(.45+.55*q),R*.9,R*.92],[R*(.45+.55*q),R*.9,R*.92]];
+const ccx=L.length>1?L[1][0]:0,hl=L.length>1?ccx+R*.9:L[0][1];
+for(const pass of[0,1])for(const[cx,rx,ry]of L){x.beginPath();x.ellipse(cx,0,rx+(pass?-2:2),ry+(pass?-2:2),0,0,TAU);x.fillStyle=pass?`hsla(${h},62%,52%,.92)`:`hsla(${h},90%,86%,1)`;x.fill()}
+x.fillStyle="rgba(255,255,255,.1)";for(const[cx,rx,ry]of L){x.beginPath();x.ellipse(cx-rx*.25,-ry*.35,rx*.5,ry*.3,0,0,TAU);x.fill()}
+x.fillStyle=`hsla(${h},60%,85%,.4)`;for(const[cx]of L)for(let i=0;i<7;i++){const a=c.ph+i*2.3,r=R*(.25+.5*((i*7)%5)/5)*(L.length>1?.7:1);x.beginPath();x.arc(cx+Math.cos(a)*r,Math.sin(a)*r*.8,2,0,TAU);x.fill()}
+const na=1-cl(p/.1);if(na>.01){x.globalAlpha=na;x.fillStyle=`hsla(${h},55%,24%,.9)`;x.strokeStyle=`hsla(${h},60%,70%,.8)`;x.lineWidth=1.5;x.beginPath();x.arc(0,0,R*.42,0,TAU);x.fill();x.stroke();x.fillStyle=`hsla(${h},40%,60%,.9)`;x.beginPath();x.arc(R*.1,-R*.08,R*.13,0,TAU);x.fill();x.globalAlpha=1}
+const ca=cl((p-.02)/.06)*(1-cl((p-.72)/.18));
+if(ca>.01){const ys=[0,1,2,3,4,5].map(i=>(i-2.5)*R*.2),mix=cl((p-.1)/.15),d2=p<.7?R*(.05+.55*cl((p-.45)/.25)):Math.abs(ccx),sp=cl((p-.15)/.1)*(1-cl((p-.65)/.1));
+const rod=(px,py,r)=>{x.save();x.translate(px,py);x.rotate(r);x.lineCap="round";x.strokeStyle="#ffd6f5";x.lineWidth=4;x.beginPath();x.moveTo(-R*.09,0);x.lineTo(R*.09,0);x.stroke();x.restore()};
+if(sp>.01){x.globalAlpha=sp*.45;x.strokeStyle="#c8e6ff";x.lineWidth=1;for(const s of[-1,1])ys.forEach(y=>{x.beginPath();x.moveTo(s*hl*.92,0);x.lineTo(p<.45?0:s*d2,y);x.stroke()})}
+x.globalAlpha=ca;ys.forEach((y,i)=>{if(p<.45){const a=i*1.05+c.ph,px=Math.cos(a)*R*.17*(1-mix),py=Math.sin(a)*R*.17*(1-mix)+y*mix;rod(px,py,.6);rod(px,py,-.6)}else for(const s of[-1,1])rod(s*d2,y,1.3)});x.globalAlpha=1}
+const n2=cl((p-.72)/.25);if(n2>.01&&L.length>1){x.globalAlpha=n2;for(const s of[-1,1]){x.fillStyle=`hsla(${h},55%,24%,.9)`;x.strokeStyle=`hsla(${h},60%,70%,.8)`;x.lineWidth=1.5;x.beginPath();x.arc(s*Math.abs(ccx),0,R*.36*(.6+.4*n2),0,TAU);x.fill();x.stroke()}x.globalAlpha=1}}
+/* batch stages */
+const ED=[0,.03,.35,.6,.85,1],CH=["1 Inoculation","2 Expansion","3 Scaffold","4 Differentiation","5 Maturation"];
+const ST=[{n:"Cell inoculation",d:"Seed muscle precursor cells are introduced into the bioreactor, which holds fresh nutrient medium.",w:"Inoculation means placing cells into their growth environment. A healthy, well-mixed start sets up everything that follows."},
+{n:"Cell expansion",d:"Cells multiply by mitosis, using up nutrients and oxygen and releasing waste. Medium is refreshed by you: watch for replacement signals and press Replace medium.",w:"Making many precursor cells first is what allows a large final amount of tissue, because specialised muscle cells divide very little."},
+{n:"Scaffold / microcarrier",d:"Simple microcarrier beads are added and cells attach to their surfaces.",w:"Scaffolds and microcarriers give cells a surface to hold on to and support tissue development. Methods differ, and some cultivated-meat approaches use none."},
+{n:"Differentiation",d:"Differentiation signals are introduced. Some precursor cells turn into specialised muscle cells, elongate, and divide less.",w:"Differentiation changes general-purpose cells into cells that behave like muscle. It is a change of cell type, not extra cells, so proliferation slows as it advances."},
+{n:"Tissue maturation and harvest",d:"Differentiated cells organise into more muscle-like tissue while it is monitored until the batch ends.",w:"Maturation makes the product more organised and tissue-like instead of a loose mass of cells."}];
+function Th(){return Bd*24}
+$("#bar").innerHTML=ED.slice(1).map((e,i)=>`<div class="seg" style="flex:${(e-ED[i])*100}"><i></i></div>`).join("");$("#chips").innerHTML=CH.map(c=>`<span>${c}</span>`).join("");
+const segs=[...document.querySelectorAll("#bar .seg")],chips=[...document.querySelectorAll("#chips span")];let shown=-1;
+function snap(){return{t:S.t,n:S.N/K,G:S.G,O:S.O,W:S.W,Dn:S.D/K,occ:S.occ,M:S.M}}
+function toast(t,b,ms){const el=document.createElement("div");el.className="toast";el.innerHTML=`<div><b>${t}</b><br>${b}</div><button aria-label="Dismiss">×</button>`;el.querySelector("button").onclick=()=>el.remove();const box=$("#toasts");box.appendChild(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),ms)}
+function logEv(t,k){const li=document.createElement("li");li.className=k||"";li.innerHTML=`<span>Day ${(S.t/24).toFixed(1)}</span>${t}`;const l=$("#evlog");l.appendChild(li);l.scrollTop=l.scrollHeight}
+function enter(s){S.stage=s;const d=ST[s];logEv("Stage "+(s+1)+" began: "+d.n,"s");
+if(s===1)S.nextFeed=S.t+36;if(s===2)logEv("Microcarrier beads added to the vessel","e");
+if(s===3){S.nextMon=S.t+72;logEv("Differentiation signals introduced (differentiation medium supplied)","e")}
+if(s===4)logEv("Tissue development monitoring begins","e");
+toast("Stage "+(s+1)+": "+d.n,d.d+" <i>Why it matters:</i> "+d.w,s?18000:14000)}
+function events(){const f=S.t/Th(),st=f<ED[1]?0:f<ED[2]?1:f<ED[3]?2:f<ED[4]?3:4;while(S.stage<st)enter(S.stage+1);
+if(S.stage>=1){const lv=(S.W>.65||S.G<.07)?2:(S.W>.4||S.G<.15)?1:0;if(lv===0&&S.sig>0&&S.W<.3&&S.G>.25)S.sig=0;if(lv>S.sig){S.sig=lv;const why=S.W>.4&&S.G<.15?"waste is high and nutrients are low":S.W>.4?"waste is building up ("+Math.round(S.W*100)+"%)":"nutrients are running low ("+Math.round(S.G*100)+"%)";logEv((lv>1?"Replace medium now: ":"Replace medium soon: ")+why,"m");toast(lv>1?"Replace the medium now":"Time to replace the medium","The "+why+". Press Replace medium to swap in fresh medium.",9000)}}
+if(S.stage>=3&&S.t>=S.nextMon){S.nextMon+=72;logEv(`Monitoring: ${Math.round(S.dp*100)}% differentiated, tissue maturity ${Math.round(S.M*100)}%`,"m")}
+if(S.t>=Th()-1e-6&&!S.done)finish()}
+function finish(){running=false;S.done=true;logEv("Batch complete: ready for harvest","s");$("#bStart").disabled=true;$("#bPause").disabled=true;
+$("#dGrid").innerHTML=[["Total cells",S.N.toFixed(1)+" M/mL"],["Precursor cells",(S.N-S.D).toFixed(1)+" M/mL"],["Differentiated cells",S.D.toFixed(1)+" M/mL"],["Differentiation progress",Math.round(S.dp*100)+"%"],["Scaffold occupied",Math.round(S.occ*100)+"%"],["Tissue maturity",Math.round(S.M*100)+"%"],["Batch length",Bd+" days"]].map(([a,b])=>`<div class="stat"><b>${b}</b><span>${a}</span></div>`).join("");$("#dMsg").textContent="";$("#done").hidden=false}
+function updBatch(){const T=Th(),f=Math.min(1,S.t/T),st=Math.max(0,S.stage);
+$("#bStage").textContent=S.done?"Batch complete":"Stage "+(st+1)+" of 5: "+ST[st].n;
+$("#bTime").textContent=`Day ${(Math.min(S.t,T)/24).toFixed(1)} of ${Bd} | ${Math.max(0,(T-S.t)/24).toFixed(1)} days remaining`;$("#bPct").textContent=Math.round(f*100)+"%";
+segs.forEach((el,i)=>el.firstChild.style.width=Math.min(1,Math.max(0,(f-ED[i])/(ED[i+1]-ED[i])))*100+"%");chips.forEach((c,i)=>c.classList.toggle("on",i===st&&!S.done));
+if(shown!==st){shown=st;$("#bDesc").innerHTML="<b>What is happening:</b> "+ST[st].d+"<br><b>Why it matters:</b> "+ST[st].w}medStat()}
+function updBeads(dt){const vis=Math.round(24*S.sc),w=Math.min(1,S.M*2);beads.forEach((b,i)=>{if(i>=vis){b.on=false;return}
+if(!b.on){b.on=true;b.x=R(V.x0+30,V.x1-30);b.y=V.liq+12}
+const a=(b.x-V.x0)/(V.x1-V.x0),q=Math.min(1,Math.max(0,(b.y-V.liq)/(V.bot-V.liq))),fx=Math.PI*Math.sin(2*Math.PI*a)*Math.cos(Math.PI*q),fy=-2*Math.PI*Math.cos(2*Math.PI*a)*Math.sin(Math.PI*q);
+b.x+=((fx*6+Math.sin(phase+b.ph)*4)*(1-w)+(b.hx-b.x)*.8*w)*dt;b.y+=((fy*6+5+Math.cos(phase+b.ph)*4)*(1-w)+(b.hy-b.y)*.8*w)*dt;
+b.x=Math.min(V.x1-16,Math.max(V.x0+16,b.x));b.y=Math.min(V.bot-30,Math.max(V.liq+12,b.y))})}
+function drawBeads(){for(const b of beads){if(!b.on)continue;g.globalAlpha=Math.min(1,S.sc*2.5);g.fillStyle="rgba(120,170,200,.28)";g.strokeStyle="rgba(190,225,240,.85)";g.lineWidth=1.5;g.beginPath();g.arc(b.x,b.y,11,0,TAU);g.fill();g.stroke();
+const nd=Math.round(S.occ*12);for(let j=0;j<nd;j++){const a=b.ph+j*TAU/12,px=b.x+Math.cos(a)*11,py=b.y+Math.sin(a)*11,df=j/12<S.dp;g.fillStyle=df?"hsla(345,70%,60%,.95)":`hsla(${BH},75%,62%,.95)`;g.beginPath();if(df)g.ellipse(px,py,4.6,2.3,a+Math.PI/2,0,TAU);else g.arc(px,py,3.2,0,TAU);g.fill()}}g.globalAlpha=1}
+function drawTissue(){const a=Math.min(1,S.dp*1.3)*(S.stage>=3?1:0);if(a<.03)return;const M=S.M,nf=6+Math.round(8*M);g.save();g.globalAlpha=a*.85;g.lineCap="round";
+for(let i=0;i<nf;i++){const y0=364+i*(84/nf);g.strokeStyle=`hsla(${350-8*M},${55+20*M}%,${40-8*M}%,.9)`;g.lineWidth=2+3.5*M;g.beginPath();for(let x=V.x0+34;x<=V.x1-34;x+=12){const y=y0+Math.sin(x*.045+i*1.7)*(1-M)*9;x===V.x0+34?g.moveTo(x,y):g.lineTo(x,y)}g.stroke()}g.restore()}
+function medStat(){const b=$("#bFlush"),lv=S.stage>=1&&!S.done?S.sig:0;b.classList.toggle("alert",lv>0);b.classList.toggle("now",lv>1);const m=$("#mstat");m.style.color=lv>1?"var(--rose)":lv>0?"var(--amber)":"var(--mut)";m.textContent=(lv>1?"Replace medium now. ":lv>0?"Replace medium soon. ":"Medium OK. ")+"Waste "+Math.round(S.W*100)+"%, nutrients "+Math.round(S.G*100)+"%."}
+function fairNote(){const ds=[...new Set(runs.map(r=>r.days))];$("#fair").textContent=ds.length>1?"Batch lengths differ ("+ds.join(", ")+" days). Stages scale with batch length, so use the % of batch view and compare final-stage metrics with care.":runs.some(r=>!r.done)?"Some runs were saved before the batch finished, so their final values are partial.":""}
+$("#bDur").onchange=e=>{Bd=+e.target.value};
+$("#dClose").onclick=()=>{$("#done").hidden=true};$("#dReset").onclick=()=>$("#bReset").click();$("#dSave").onclick=()=>{$("#bSave").click();$("#dMsg").textContent=$("#expMsg").textContent};
+function resize(){fit(cv,800,560);fit(gv,800,260);fit(cc,800,260)}
+window.addEventListener("resize",resize);resize();init();requestAnimationFrame(tick);
+</script>
+</body>
+</html>
